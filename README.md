@@ -203,6 +203,7 @@ Where:
   * `<IP_VERSION>` is `ipv4` or `ipv6`.
 
 Examples:
+
 * `aws-ip-ranges-api-gateway-ipv4`
 * `aws-ip-ranges-route53-healthchecks-ipv4`
 * `aws-ip-ranges-route53-healthchecks-ipv6`
@@ -211,25 +212,28 @@ Examples:
 ## Cleanup
  
 1. Delete the stack
-    ```bash
+
+    ```shell
     aws cloudformation delete-stack --stack-name [YOUR STACK NAME]
     ```
+
 1. Confirm the stack has been deleted
-    ```bash
+
+    ```shell
     aws cloudformation list-stacks --query "StackSummaries[?contains(StackName,'[YOUR STACK NAME]')].StackStatus"
     ```
+
 ----
 
 ### 2. Reference resources
 
-For WAF IPSet, see [Using an IP set in a rule group or Web ACL](https://docs.aws.amazon.com/waf/latest/developerguide/waf-ip-set-using.html).  
-For VPC Prefix List, see [Reference prefix lists in your AWS resources](https://docs.aws.amazon.com/vpc/latest/userguide/managed-prefix-lists-referencing.html).
-For Resource Access Manager, see [Enable resource sharing within AWS Organizations](https://docs.aws.amazon.com/ram/latest/userguide/getting-started-sharing.html#getting-started-sharing-orgs)
-
+* For WAF IPSet, see [Using an IP set in a rule group or Web ACL](https://docs.aws.amazon.com/waf/latest/developerguide/waf-ip-set-using.html).
+* For VPC Prefix List, see [Reference prefix lists in your AWS resources](https://docs.aws.amazon.com/vpc/latest/userguide/managed-prefix-lists-referencing.html).
+* For Resource Access Manager, see [Enable resource sharing within AWS Organizations](https://docs.aws.amazon.com/ram/latest/userguide/getting-started-sharing.html#getting-started-sharing-orgs)
 
 ## Troubleshooting
 
-**Wrong WAF IPSet Scope**
+### Wrong WAF IPSet Scope
 
 > An error occurred (WAFInvalidParameterException) when calling the ListIPSets operation: Error reason: The scope is not valid., field: SCOPE_VALUE, parameter: CLOUDFRONT
 
