@@ -12,9 +12,9 @@ from urllib import request
 from aws_lambda_powertools import Logger
 from aws_lambda_powertools.utilities.typing import LambdaContext
 
-DESCRIPTION = 'Managed by update IP ranges Lambda'
-RESOURCE_NAME_PREFIX = 'aws-ip-ranges'
-MANAGED_BY = 'update-aws-ip-ranges'
+DESCRIPTION = "Managed by update IP ranges Lambda"
+RESOURCE_NAME_PREFIX = "aws-ip-ranges"
+MANAGED_BY = "update-aws-ip-ranges"
 
 logger = Logger(service="aws-ip-ranges")
 
@@ -25,21 +25,21 @@ logger = Logger(service="aws-ip-ranges")
 # If you enable DEBUG, it will log boto3 calls as well.
 
 # Use parameterised appconfig references using environment variables
-APP_CONFIG_APP_NAME = os.getenv('APP_CONFIG_APP_NAME', '')
-APP_CONFIG_APP_ENV_NAME = os.getenv('APP_CONFIG_APP_ENV_NAME', '')
-APP_CONFIG_NAME = os.getenv('APP_CONFIG_NAME', '')
-AWS_ORG_ARN = os.getenv('AWS_ORG_ARN', '')
+APP_CONFIG_APP_NAME = os.getenv("APP_CONFIG_APP_NAME", "")
+APP_CONFIG_APP_ENV_NAME = os.getenv("APP_CONFIG_APP_ENV_NAME", "")
+APP_CONFIG_NAME = os.getenv("APP_CONFIG_NAME", "")
+AWS_ORG_ARN = os.getenv("AWS_ORG_ARN", "")
 
 # Define client for services
-waf_client = boto3.client('wafv2')
-ec2_client = boto3.client('ec2')
-ram_client = boto3.client('ram')
+waf_client = boto3.client("wafv2")
+ec2_client = boto3.client("ec2")
+ram_client = boto3.client("ram")
 
-#======================================================================================================================
+# ======================================================================================================================
 # Data classes and help functions
-#======================================================================================================================
+# ======================================================================================================================
 @dataclass
-class IPv4List():
+class IPv4List:
     """List of IPv4 Networks"""
 
     ip_list: list[str] = field(default_factory=list)
@@ -56,20 +56,22 @@ class IPv4List():
                     [ipaddress.IPv4Network(addr) for addr in self.ip_list]
                 )
             )
-            self.__summarized_ip_list = [net.with_prefixlen for net in summarized_sorted]
+            self.__summarized_ip_list = [
+                net.with_prefixlen for net in summarized_sorted
+                ]
         return self.__summarized_ip_list
 
     def sort(self) -> None:
         """Sort this list as IPv4 network"""
         if len(self.ip_list) > 1:
-            self.ip_list = sorted(self.ip_list, key = ipaddress.IPv4Network)
+            self.ip_list = sorted(self.ip_list, key=ipaddress.IPv4Network)
 
     def asdict(self) -> dict:
         """Return a dictionary from this object"""
         return asdict(self)
 
 @dataclass
-class IPv6List():
+class IPv6List:
     """List of IPv6 Networks"""
 
     ip_list: list[str] = field(default_factory=list)
@@ -97,63 +99,65 @@ class IPv6List():
         return asdict(self)
 
 @dataclass
-class ServiceIPRange():
+class ServiceIPRange:
     """Store IPv4 and IPv6 networks"""
     ipv4: IPv4List = field(default_factory=IPv4List)
     ipv6: IPv6List = field(default_factory=IPv6List)
 
     def asdict(self) -> dict[str, Union[IPv4List, IPv6List]]:
         """Return a dictionary from this object"""
-        return {'ipv4': self.ipv4, 'ipv6': self.ipv6}
+        return {"ipv4": self.ipv4, "ipv6": self.ipv6}
 
 ### General functions
 def get_ip_groups_json(url: str, expected_hash: str) -> str:
     """Get ip-range.json file and check if it mach the expected MD5 hash"""
-    logger.info('get_ip_groups_json start')
-    logger.debug(f'Parameter url: {url}')
-    logger.debug(f'Parameter expected_hash: {expected_hash}')
+    logger.info("get_ip_groups_json start")
+    logger.debug(f"Parameter url: {url}")
+    logger.debug(f"Parameter expected_hash: {expected_hash}")
 
     # Get ip-ranges.json file
     logger.info(f'Updating from "{url}"')
-    if not url.lower().startswith('http'):
+    if not url.lower().startswith("http"):
         raise Exception(f'Expecting an HTTP protocol URL, got "{url}"')
     req = request.Request(url)
-    with request.urlopen(req) as response: #nosec B310
+    with request.urlopen(req) as response:  # nosec B310
         ip_json = response.read()
     logger.info(f'Got "ip-ranges.json" file from "{url}"')
-    logger.debug(f'File content: {ip_json}')
+    logger.debug(f"File content: {ip_json}")
 
     # Calculate MD5 hash from current file
-    m = hashlib.md5() # nosec B303
+    m = hashlib.md5()  # nosec B303
     m.update(ip_json)
     current_hash = m.hexdigest()
     logger.debug(f'Calculated MD5 file hash "{current_hash}"')
 
     # If the hash provided is 'test-hash', returns the JSON without checking the hash
-    if expected_hash == 'test-hash':
-        logger.info('Running in test mode')
+    if expected_hash == "test-hash":
+        logger.info("Running in test mode")
         return ip_json
 
     # Current file hash MUST match the one expected
     if current_hash != expected_hash:
-        raise Exception(f'MD5 Mismatch: got "{current_hash}" expected "{expected_hash}"')
+        raise Exception(
+            f'MD5 Mismatch: got "{current_hash}" expected "{expected_hash}"'
+        )
 
-    logger.debug(f'Function return: {ip_json}')
-    logger.info('get_ip_groups_json end')
+    logger.debug(f"Function return: {ip_json}")
+    logger.info("get_ip_groups_json end")
     return ip_json
 
 def get_ranges_for_service(ranges: dict, config_services: dict) -> dict[str, ServiceIPRange]:
     """Gets IPv4 and IPv6 prefixes from the matching services"""
-    logger.info('get_ranges_for_service start')
-    logger.debug(f'Parameter ranges: {ranges}')
-    logger.debug(f'Parameter config_services: {config_services}')
+    logger.info("get_ranges_for_service start")
+    logger.debug(f"Parameter ranges: {ranges}")
+    logger.debug(f"Parameter config_services: {config_services}")
 
     service_ranges: dict[str, ServiceIPRange] = {}
     service_control: dict[str, bool] = {}
-    for config_service in config_services['Services']:
-        service_name = config_service['Name']
-        if len(config_service['Regions']) > 0:
-            for region in config_service['Regions']:
+    for config_service in config_services["Services"]:
+        service_name = config_service["Name"]
+        if len(config_service["Regions"]) > 0:
+            for region in config_service["Regions"]:
                 logger.info(f"Will search for '{service_name}' and region '{region}'")
                 key = f"{service_name}-{region}"
 
@@ -167,55 +171,55 @@ def get_ranges_for_service(ranges: dict, config_services: dict) -> dict[str, Ser
             service_ranges[service_name] = ServiceIPRange()
 
     # Loop over the IPv4 prefixes and appends the matching services
-    logger.info('Searching for IPv4 prefixes')
-    for prefix in ranges['prefixes']:
-        service_name = prefix['service']
-        service_region = prefix['region']
+    logger.info("Searching for IPv4 prefixes")
+    for prefix in ranges["prefixes"]:
+        service_name = prefix["service"]
+        service_region = prefix["region"]
         key = f"{service_name}-{service_region}"
         if key in service_control:
             logger.info(f"Found service: '{service_name}' region: '{service_region}' range: {prefix['ip_prefix']}")
-            service_ranges[service_name].ipv4.ip_list.append(prefix['ip_prefix'])
+            service_ranges[service_name].ipv4.ip_list.append(prefix["ip_prefix"])
         else:
             key = f"{service_name}"
             if key in service_control:
                 logger.info(f"Found service: '{service_name}' range: {prefix['ip_prefix']}")
-                service_ranges[service_name].ipv4.ip_list.append(prefix['ip_prefix'])
+                service_ranges[service_name].ipv4.ip_list.append(prefix["ip_prefix"])
 
     # Loop over the IPv6 prefixes and appends the matching services
-    logger.info('Searching for IPv6 prefixes')
-    for ipv6_prefix in ranges['ipv6_prefixes']:
-        service_name = ipv6_prefix['service']
-        service_region = ipv6_prefix['region']
+    logger.info("Searching for IPv6 prefixes")
+    for ipv6_prefix in ranges["ipv6_prefixes"]:
+        service_name = ipv6_prefix["service"]
+        service_region = ipv6_prefix["region"]
         key = f"{service_name}-{service_region}"
         if key in service_control:
             logger.info(f"Found service: '{service_name}' region: '{service_region}' range: {ipv6_prefix['ipv6_prefix']}")
-            service_ranges[service_name].ipv6.ip_list.append(ipv6_prefix['ipv6_prefix'])
+            service_ranges[service_name].ipv6.ip_list.append(ipv6_prefix["ipv6_prefix"])
         else:
             key = f"{service_name}"
             if key in service_control:
                 logger.info(f"Found service: '{service_name}' range: {ipv6_prefix['ipv6_prefix']}")
-                service_ranges[service_name].ipv6.ip_list.append(ipv6_prefix['ipv6_prefix'])
+                service_ranges[service_name].ipv6.ip_list.append(ipv6_prefix["ipv6_prefix"])
 
     # Sort all ranges
     for service_name in service_ranges.keys():
         service_ranges[service_name].ipv4.sort()
         service_ranges[service_name].ipv6.sort()
 
-    logger.debug(f'Function return: {service_ranges}')
-    logger.info('get_ranges_for_service end')
+    logger.debug(f"Function return: {service_ranges}")
+    logger.info("get_ranges_for_service end")
     return service_ranges
 
 
 ### WAF IPSet functions
 def manage_waf_ipset(client: Any, waf_ipsets: dict[str, dict], service_name: str, ipset_scope: str, service_ranges: dict[str, ServiceIPRange], should_summarize: bool) -> dict[str, list[str]]:
     """Create or Update WAF IPSet"""
-    logger.info('manage_waf_ipset start')
-    logger.debug(f'Parameter client: {client}')
-    logger.debug(f'Parameter waf_ipsets: {waf_ipsets}')
-    logger.debug(f'Parameter service_name: {service_name}')
-    logger.debug(f'Parameter ipset_scope: {ipset_scope}')
-    logger.debug(f'Parameter service_ranges: {service_ranges}')
-    logger.debug(f'Parameter should_summarize: {should_summarize}')
+    logger.info("manage_waf_ipset start")
+    logger.debug(f"Parameter client: {client}")
+    logger.debug(f"Parameter waf_ipsets: {waf_ipsets}")
+    logger.debug(f"Parameter service_name: {service_name}")
+    logger.debug(f"Parameter ipset_scope: {ipset_scope}")
+    logger.debug(f"Parameter service_ranges: {service_ranges}")
+    logger.debug(f"Parameter should_summarize: {should_summarize}")
 
     # Dictionary to return the IPSet names that will be created or updated
     ipset_names: dict[str, list[str]] = {'created': [], 'updated': []}

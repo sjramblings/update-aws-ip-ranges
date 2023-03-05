@@ -11,7 +11,7 @@ Important: this application uses various AWS services and there are costs associ
 
 > **NOTE**  
 > This is an upgraded version of the repository below and integrates Lambda PowerTools. This repo adds support for RAM Prefix sharing and also moves the service configuration into AWS AppConfig.
-> https://github.com/aws-samples/update-aws-ip-ranges
+> [GitHub AWS-Sample Update-aws-ip-ranges](https://github.com/aws-samples/update-aws-ip-ranges)
 
 ## Requirements
 
@@ -34,7 +34,7 @@ Important: this application uses various AWS services and there are costs associ
     cd update-aws-ip-ranges
     ```
 
-1. From the command line, use AWS SAM to deploy the AWS resources for the pattern as specified in the template.yml file:
+1. From the command-line, use AWS SAM to deploy the AWS resources for the pattern as specified in the template.yml file:
 
     ```shell
     sam deploy --guided
@@ -208,9 +208,8 @@ Examples:
 * `aws-ip-ranges-route53-healthchecks-ipv4`
 * `aws-ip-ranges-route53-healthchecks-ipv6`
 
-
 ## Cleanup
- 
+
 1. Delete the stack
 
     ```shell
@@ -239,6 +238,5 @@ Examples:
 
 Scope name `CLOUDFRONT` is correct, but it MUST be running on North Virginia (us-east-1) region. If it runs outside North Virginia, you will see the error above.  
 Please make sure it is running on North Virginia (us-east-1) region.
-
 
 SPDX-License-Identifier: MIT-0
