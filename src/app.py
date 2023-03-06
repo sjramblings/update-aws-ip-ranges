@@ -433,7 +433,7 @@ def list_waf_ipset(client: Any, ipset_scope: str) -> dict[str, dict]:
         for ipset in response["IPSets"]:
             ipsets[ipset["Name"]] = ipset
 
-        if not "NextMarker" in response:
+        if "NextMarker" not in response:
             break
 
         # As there is a NextMarket it needs to perform the list call again
@@ -576,7 +576,7 @@ def list_prefix_lists(client: Any) -> dict[str, dict]:
         for prefix_list in response["PrefixLists"]:
             prefix_lists[prefix_list["PrefixListName"]] = prefix_list
 
-        if not "NextToken" in response:
+        if "NextToken" not in response:
             break
 
         # As there is a NextToken it needs to perform the list call again
@@ -850,8 +850,6 @@ def create_prefix_ram(client: Any, prefix_list_name: str, prefix_list_arn: str) 
     logger.debug(f"Parameter client: {client}")
     logger.debug(f"Parameter prefix_list_name: {prefix_list_name}")
     logger.debug(f"Parameter prefix_list_arn: {prefix_list_arn}")
-
-    account_id = prefix_list_arn.split(":")
 
     logger.info(f'Creating RAM Share "{prefix_list_name}" with Arn "{prefix_list_arn}"')
     response = client.create_resource_share(
