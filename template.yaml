@@ -1,3 +1,5 @@
+---
+
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
@@ -35,9 +37,9 @@ Globals:
 
 Resources:
   SAMConfigApplication:
-      Type: AWS::AppConfig::Application
-      Properties:
-        Name: !Ref AppConfigAppName
+    Type: AWS::AppConfig::Application
+    Properties:
+      Name: !Ref AppConfigAppName
   
   Environment:
     Type: AWS::AppConfig::Environment
@@ -236,7 +238,7 @@ Resources:
               Condition:
                 StringEquals:
                   'ec2:Region': !Ref AWS::Region
-                  'ec2:CreateAction' : 'CreateManagedPrefixList'
+                  'ec2:CreateAction': 'CreateManagedPrefixList'
 
             - Effect: 'Allow'
               Action:
