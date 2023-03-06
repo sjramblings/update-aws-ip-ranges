@@ -17,7 +17,7 @@ MANAGED_BY = "update-aws-ip-ranges"
 
 logger = Logger(service="aws-ip-ranges")
 
-####### Get values from environment variables  ######
+# Get values from environment variables
 
 # The following log levels can be assinged using LOG_LEVEL. INFO is the default.
 # CRITICAL, ERROR, WARNING, INFO, DEBUG
@@ -112,7 +112,7 @@ class ServiceIPRange:
         return {"ipv4": self.ipv4, "ipv6": self.ipv6}
 
 
-### General functions
+# General functions
 def get_ip_groups_json(url: str, expected_hash: str) -> str:
     """Get ip-range.json file and check if it mach the expected MD5 hash"""
     logger.info("get_ip_groups_json start")
@@ -229,7 +229,7 @@ def get_ranges_for_service(
     return service_ranges
 
 
-### WAF IPSet functions
+# WAF IPSet functions
 def manage_waf_ipset(
     client: Any,
     waf_ipsets: dict[str, dict],
@@ -476,7 +476,7 @@ def get_ip_set_entries(
     return entries
 
 
-### VPC Prefix List
+# VPC Prefix List
 def manage_prefix_list(
     client: Any,
     vpc_prefix_lists: dict[str, dict],
@@ -879,8 +879,10 @@ def get_service_config():
         with request.urlopen(appconfig) as response:  # nosec B310
             config = response.read()
         return config
-    except:
-        return default
+    except Exception as error:
+        logger.error("Error retrieving AppConfig configuration. Exiting")
+        logger.exception(error)
+        raise error
 
 
 # ======================================================================================================================
@@ -951,7 +953,7 @@ def lambda_handler(event, context):
         should_share: bool = True
 
         # Create or Update the appropriate resource for each service range found
-        ### Prefix List
+        # Prefix List
         logger.info("Handling VPC Prefix List")
         vpc_prefix_lists: dict[str, dict] = {}
         for config_service in config_services["Services"]:
@@ -1007,7 +1009,7 @@ def lambda_handler(event, context):
             logger.info(f'Finish handle VPC Prefix List for "{service_name}"')
 
         # Create or Update the appropriate resource for each service range found
-        ### WAF IPSet
+        # WAF IPSet
         logger.info("Handling WAF IPSet")
         waf_ipsets_by_scope: dict[str, dict] = {}
         for config_service in config_services["Services"]:
