@@ -1,0 +1,252 @@
+---
+
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  update-aws-ip-ranges
+
+  SAM Template for update-aws-ip-ranges
+
+Parameters:
+  AppConfigAppName:
+    Type: String
+    Description: AppConfig Application Name
+    Default: aws-ip-ranges
+  AppConfigAppEnvironmentName:
+    Type: String
+    Description: AppConfig Application Environment Name
+    Default: dev
+  AppConfigName:
+    Type: String
+    Description: AppConfig Name
+    Default: services
+  AppConfigLayerArn:
+    Type: String
+    Description: Retrieve AWS AppConfig Lambda extension arn from `https://docs.aws.amazon.com/appconfig/latest/userguide/appconfig-integration-lambda-extensions-versions.html#appconfig-integration-lambda-extensions-enabling-x86-64`
+    Default: arn:aws:lambda:ap-southeast-2:080788657173:layer:AWS-AppConfig-Extension:91
+  AwsOrgArn:
+    Type: String
+    Description: The ARN of the AWS Organization used to share Prefix Lists
+    Default: notset
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 300
+    MemorySize: 128
+
+Resources:
+  SAMConfigApplication:
+    Type: AWS::AppConfig::Application
+    Properties:
+      Name: !Ref AppConfigAppName
+  
+  Environment:
+    Type: AWS::AppConfig::Environment
+    Properties:
+      Name: !Ref AppConfigAppEnvironmentName
+      ApplicationId: !Ref SAMConfigApplication
+  
+  SAMConfigConfigurationProfile:
+    Type: AWS::AppConfig::ConfigurationProfile
+    Properties:
+      ApplicationId: !Ref SAMConfigApplication
+      Name: !Ref AppConfigName
+      Type: 'AWS.Freeform'
+      LocationUri: 'hosted'
+
+  SAMConfigDeploymentStrategy:
+    Type: AWS::AppConfig::DeploymentStrategy
+    Properties:
+      Name: "SAMConfigDeploymentStrategy"
+      Description: "A deployment strategy to deploy the config immediately"
+      DeploymentDurationInMinutes: 0
+      FinalBakeTimeInMinutes: 0
+      GrowthFactor: 100
+      GrowthType: LINEAR
+      ReplicateTo: NONE
+
+  BasicHostedConfigurationVersion:
+    Type: AWS::AppConfig::HostedConfigurationVersion
+    Properties:
+      ApplicationId: !Ref SAMConfigApplication
+      ConfigurationProfileId: !Ref SAMConfigConfigurationProfile
+      Description: 'AWS Service configuration for update-aws-ip-ranges'
+      ContentType: 'application/json'
+      Content: |
+        {
+          "Services": [
+            {
+              "Name": "CODEBUILD",
+              "Regions": [
+                "ap-southeast-2"
+              ],
+              "PrefixList": {
+                "Enable": true,
+                "Summarize": true
+              },
+              "WafIPSet": {
+                "Enable": true,
+                "Summarize": true,
+                "Scopes": [
+                  "REGIONAL"
+                ]
+              }
+            }
+          ]
+        }
+  AppConfigDeployment:
+    Type: AWS::AppConfig::Deployment
+    Properties:
+      ApplicationId: !Ref SAMConfigApplication
+      ConfigurationProfileId: !Ref SAMConfigConfigurationProfile
+      ConfigurationVersion: !Ref BasicHostedConfigurationVersion
+      DeploymentStrategyId: !Ref SAMConfigDeploymentStrategy
+      EnvironmentId: !Ref Environment
+
+  LambdaUpdateIPRanges:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: src/
+      Handler: app.lambda_handler
+      Runtime: python3.9
+      Architectures:
+        - x86_64
+      Environment:
+        Variables:
+          APP_CONFIG_APP_NAME: !Ref AppConfigAppName
+          APP_CONFIG_APP_ENV_NAME: !Ref AppConfigAppEnvironmentName
+          APP_CONFIG_NAME: !Ref AppConfigName
+          AWS_ORG_ARN: !Ref AwsOrgArn
+          LOG_LEVEL: INFO
+      Layers:
+        - !Ref AppConfigLayerArn
+      Policies:        
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - appconfig:GetLatestConfiguration
+                - appconfig:StartConfigurationSession
+              Resource: !Sub 'arn:aws:appconfig:${AWS::Region}:${AWS::AccountId}:application/*'
+            - Effect: 'Allow'
+              Action:
+                - 'wafv2:ListIPSets'
+              Resource: '*'
+
+            - Effect: 'Allow'
+              Action:
+                - 'wafv2:CreateIPSet'
+                - 'wafv2:TagResource'
+              Resource: '*'
+              Condition:
+                StringLike:
+                  'aws:RequestTag/Name':
+                    - 'aws-ip-ranges-*-ipv4'
+                    - 'aws-ip-ranges-*-ipv6'
+                StringEquals:
+                  'aws:RequestTag/ManagedBy': 'update-aws-ip-ranges'
+                  'aws:RequestTag/UpdatedAt': 'Not yet'
+                'ForAllValues:StringEquals':
+                  'aws:TagKeys':
+                    - 'Name'
+                    - 'ManagedBy'
+                    - 'CreatedAt'
+                    - 'UpdatedAt'
+
+            - Effect: 'Allow'
+              Action:
+                - 'wafv2:TagResource'
+              Resource:
+                - !Sub 'arn:${AWS::Partition}:wafv2:${AWS::Region}:${AWS::AccountId}:*/ipset/aws-ip-ranges-*-ipv4/*'
+                - !Sub 'arn:${AWS::Partition}:wafv2:${AWS::Region}:${AWS::AccountId}:*/ipset/aws-ip-ranges-*-ipv6/*'
+              Condition:
+                StringLike:
+                  'aws:ResourceTag/Name':
+                    - 'aws-ip-ranges-*-ipv4'
+                    - 'aws-ip-ranges-*-ipv6'
+                StringEquals:
+                  'aws:ResourceTag/ManagedBy': 'update-aws-ip-ranges'
+                'ForAllValues:StringEquals':
+                  'aws:TagKeys':
+                    - 'UpdatedAt'
+
+            - Effect: 'Allow'
+              Action:
+                - 'wafv2:ListTagsForResource'
+                - 'wafv2:GetIPSet'
+                - 'wafv2:UpdateIPSet'
+              Resource:
+                - !Sub 'arn:${AWS::Partition}:wafv2:${AWS::Region}:${AWS::AccountId}:*/ipset/aws-ip-ranges-*-ipv4/*'
+                - !Sub 'arn:${AWS::Partition}:wafv2:${AWS::Region}:${AWS::AccountId}:*/ipset/aws-ip-ranges-*-ipv6/*'
+              Condition:
+                StringLike:
+                  'aws:ResourceTag/Name':
+                    - 'aws-ip-ranges-*-ipv4'
+                    - 'aws-ip-ranges-*-ipv6'
+                StringEquals:
+                  'aws:ResourceTag/ManagedBy': 'update-aws-ip-ranges'
+
+            - Effect: 'Allow'
+              Action:
+                - 'ec2:DescribeTags'
+                - 'ec2:DescribeManagedPrefixLists'
+              Resource: '*'
+              Condition:
+                StringEquals:
+                  'ec2:Region': !Ref AWS::Region
+
+            - Effect: 'Allow'
+              Action:
+                - 'ec2:GetManagedPrefixListEntries'
+                - 'ec2:ModifyManagedPrefixList'
+                - 'ec2:CreateTags'
+              Resource: !Sub 'arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:prefix-list/*'
+              Condition:
+                StringEquals:
+                  'ec2:Region': !Ref AWS::Region
+                  'aws:ResourceTag/ManagedBy': 'update-aws-ip-ranges'
+                StringLike:
+                  'aws:ResourceTag/Name':
+                    - 'aws-ip-ranges-*-ipv4'
+                    - 'aws-ip-ranges-*-ipv6'
+
+            - Effect: 'Allow'
+              Action:
+                - 'ec2:CreateManagedPrefixList'
+              Resource: !Sub 'arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:prefix-list/*'
+              Condition:
+                StringEquals:
+                  'ec2:Region': !Ref AWS::Region
+                  'aws:RequestTag/ManagedBy': 'update-aws-ip-ranges'
+                  'aws:RequestTag/UpdatedAt': 'Not yet'
+                StringLike:
+                  'aws:RequestTag/Name':
+                    - 'aws-ip-ranges-*-ipv4'
+                    - 'aws-ip-ranges-*-ipv6'
+                'ForAllValues:StringEquals':
+                  'aws:TagKeys':
+                    - 'Name'
+                    - 'ManagedBy'
+                    - 'CreatedAt'
+                    - 'UpdatedAt'
+
+            - Effect: 'Allow'
+              Action:
+                - 'ec2:CreateTags'
+              Resource: !Sub 'arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:prefix-list/*'
+              Condition:
+                StringEquals:
+                  'ec2:Region': !Ref AWS::Region
+                  'ec2:CreateAction': 'CreateManagedPrefixList'
+
+            - Effect: 'Allow'
+              Action:
+                - 'ram:CreateResourceShare'
+                - 'ram:TagResource'
+              Resource: !Sub 'arn:${AWS::Partition}:ram:${AWS::Region}:${AWS::AccountId}:resource-share/*'
+
+Outputs:
+  LambdaUpdateIPRanges:
+    Description: "Update AWS IP Ranges Lambda Function ARN"
+    Value: !GetAtt LambdaUpdateIPRanges.Arn

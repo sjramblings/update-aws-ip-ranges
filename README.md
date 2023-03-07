@@ -11,7 +11,7 @@ Important: this application uses various AWS services and there are costs associ
 
 > **NOTE**  
 > This is an upgraded version of the repository below and integrates Lambda PowerTools. This repo adds support for RAM Prefix sharing and also moves the service configuration into AWS AppConfig.
-> https://github.com/aws-samples/update-aws-ip-ranges
+> [GitHub AWS-Sample Update-aws-ip-ranges](https://github.com/aws-samples/update-aws-ip-ranges)
 
 ## Requirements
 
@@ -34,7 +34,7 @@ Important: this application uses various AWS services and there are costs associ
     cd update-aws-ip-ranges
     ```
 
-1. From the command line, use AWS SAM to deploy the AWS resources for the pattern as specified in the template.yml file:
+1. From the command-line, use AWS SAM to deploy the AWS resources for the pattern as specified in the template.yml file:
 
     ```shell
     sam deploy --guided
@@ -203,38 +203,40 @@ Where:
   * `<IP_VERSION>` is `ipv4` or `ipv6`.
 
 Examples:
+
 * `aws-ip-ranges-api-gateway-ipv4`
 * `aws-ip-ranges-route53-healthchecks-ipv4`
 * `aws-ip-ranges-route53-healthchecks-ipv6`
 
-
 ## Cleanup
- 
+
 1. Delete the stack
-    ```bash
+
+    ```shell
     aws cloudformation delete-stack --stack-name [YOUR STACK NAME]
     ```
+
 1. Confirm the stack has been deleted
-    ```bash
+
+    ```shell
     aws cloudformation list-stacks --query "StackSummaries[?contains(StackName,'[YOUR STACK NAME]')].StackStatus"
     ```
+
 ----
 
 ### 2. Reference resources
 
-For WAF IPSet, see [Using an IP set in a rule group or Web ACL](https://docs.aws.amazon.com/waf/latest/developerguide/waf-ip-set-using.html).  
-For VPC Prefix List, see [Reference prefix lists in your AWS resources](https://docs.aws.amazon.com/vpc/latest/userguide/managed-prefix-lists-referencing.html).
-For Resource Access Manager, see [Enable resource sharing within AWS Organizations](https://docs.aws.amazon.com/ram/latest/userguide/getting-started-sharing.html#getting-started-sharing-orgs)
-
+* For WAF IPSet, see [Using an IP set in a rule group or Web ACL](https://docs.aws.amazon.com/waf/latest/developerguide/waf-ip-set-using.html).
+* For VPC Prefix List, see [Reference prefix lists in your AWS resources](https://docs.aws.amazon.com/vpc/latest/userguide/managed-prefix-lists-referencing.html).
+* For Resource Access Manager, see [Enable resource sharing within AWS Organizations](https://docs.aws.amazon.com/ram/latest/userguide/getting-started-sharing.html#getting-started-sharing-orgs)
 
 ## Troubleshooting
 
-**Wrong WAF IPSet Scope**
+### Wrong WAF IPSet Scope
 
 > An error occurred (WAFInvalidParameterException) when calling the ListIPSets operation: Error reason: The scope is not valid., field: SCOPE_VALUE, parameter: CLOUDFRONT
 
 Scope name `CLOUDFRONT` is correct, but it MUST be running on North Virginia (us-east-1) region. If it runs outside North Virginia, you will see the error above.  
 Please make sure it is running on North Virginia (us-east-1) region.
-
 
 SPDX-License-Identifier: MIT-0
